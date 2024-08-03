@@ -1,88 +1,98 @@
 \c mydb
 -- User Table
-CREATE TABLE "User" (
-                        "UserID" SERIAL PRIMARY KEY,
-                        "UserName" VARCHAR(50) NOT NULL,
-                        "Password" VARCHAR(50) NOT NULL,
-                        "Email" VARCHAR(100),
-                        "Name" VARCHAR(100)
+CREATE TABLE users (
+                      user_id SERIAL PRIMARY KEY,
+                      user_name VARCHAR(50) NOT NULL,
+                      password VARCHAR(50) NOT NULL,
+                      email VARCHAR(100),
+                      name VARCHAR(100)
 );
 
 -- Friendship Table
-CREATE TABLE "Friend" (
-                              "FriendID" SERIAL PRIMARY KEY,
-                              "UserID1" INT,
-                              "UserID2" INT,
-                              "Status" VARCHAR(20),
-                              FOREIGN KEY ("UserID1") REFERENCES "User"("UserID"),
-                              FOREIGN KEY ("UserID2") REFERENCES "User"("UserID")
+CREATE TABLE friend (
+                        friend_id SERIAL PRIMARY KEY,
+                        user_id1 INT,
+                        user_id2 INT,
+                        status VARCHAR(20),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id1) REFERENCES users(user_id),
+                        FOREIGN KEY (user_id2) REFERENCES users(user_id)
 );
 
 -- Portfolio Table
-CREATE TABLE "Portfolio" (
-                             "UserID" INT,
-                             "ProfolioID" SERIAL PRIMARY KEY,
-                             "Name" VARCHAR(100),
-                             "CashBalance" DECIMAL(15, 2),
-                             FOREIGN KEY ("UserID") REFERENCES "User"("UserID")
+CREATE TABLE portfolio (
+                           user_id INT,
+                           portfolio_id SERIAL PRIMARY KEY,
+                           name VARCHAR(100),
+                           cash_balance DECIMAL(15, 2),
+                           FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 -- Stock Table
-CREATE TABLE "Stock" (
-                         "StockID" SERIAL PRIMARY KEY,
-                         "Symbol" VARCHAR(10),
-                         "CompanyName" VARCHAR(100)
+CREATE TABLE stock (
+                       stock_id SERIAL PRIMARY KEY,
+                       symbol VARCHAR(10) UNIQUE,
+                       company_name VARCHAR(100),
+                       current_price DOUBLE PRECISION
 );
 
--- StockHolding Table
-CREATE TABLE "StockHolding" (
-                                "HoldingID" SERIAL PRIMARY KEY,
-                                "ProfolioID" INT,
-                                "StockID" INT,
-                                "Shares" INT,
-                                FOREIGN KEY ("ProfolioID") REFERENCES "Portfolio"("ProfolioID"),
-                                FOREIGN KEY ("StockID") REFERENCES "Stock"("StockID")
+-- Stock Holding Table
+CREATE TABLE stock_holding (
+                               holding_id SERIAL PRIMARY KEY,
+                               portfolio_id INT,
+                               stock_id INT,
+                               shares INT,
+                               FOREIGN KEY (portfolio_id) REFERENCES portfolio(portfolio_id),
+                               FOREIGN KEY (stock_id) REFERENCES stock(stock_id)
 );
 
--- StockDailyData Table
-CREATE TABLE "StockDailyData" (
-                                  "DataID" SERIAL PRIMARY KEY,
-                                  "StockID" INT,
-                                  "Timestamp" TIMESTAMP,
-                                  "Open" DECIMAL(15, 2),
-                                  "High" DECIMAL(15, 2),
-                                  "Low" DECIMAL(15, 2),
-                                  "Close" DECIMAL(15, 2),
-                                  "Volume" INT,
-                                  FOREIGN KEY ("StockID") REFERENCES "Stock"("StockID")
+-- Stock Daily Data Table
+CREATE TABLE stock_daily_data (
+                                  data_id SERIAL PRIMARY KEY,
+                                  timestamp TIMESTAMP,
+                                  open DECIMAL(15, 2),
+                                  high DECIMAL(15, 2),
+                                  low DECIMAL(15, 2),
+                                  close DECIMAL(15, 2),
+                                  volume INT,
+                                  symbol VARCHAR(10)
 );
 
--- StockList Table
-CREATE TABLE "StockList" (
-                             "ListID" SERIAL PRIMARY KEY,
-                             "UserID" INT,
-                             "Name" VARCHAR(100),
-                             "Public" BOOLEAN DEFAULT FALSE,
-                             FOREIGN KEY ("UserID") REFERENCES "User"("UserID")
+-- Stock List Table
+CREATE TABLE stock_list (
+                            list_id SERIAL PRIMARY KEY,
+                            user_id INT,
+                            name VARCHAR(100),
+                            public BOOLEAN DEFAULT FALSE,
+                            FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- StockListHolding Table
-CREATE TABLE "StockListHolding" (
-                                    "LHoldingID" SERIAL PRIMARY KEY,
-                                    "ListID" INT,
-                                    "StockID" INT,
-                                    "Shares" INT,
-                                    FOREIGN KEY ("ListID") REFERENCES "StockList"("ListID"),
-                                    FOREIGN KEY ("StockID") REFERENCES "Stock"("StockID")
+-- Stock List Holding Table
+CREATE TABLE stock_list_holding (
+                                    l_holding_id SERIAL PRIMARY KEY,
+                                    list_id INT,
+                                    stock_id INT,
+                                    shares INT,
+                                    FOREIGN KEY (list_id) REFERENCES stock_list(list_id),
+                                    FOREIGN KEY (stock_id) REFERENCES stock(stock_id)
 );
 
 -- Review Table
-CREATE TABLE "Review" (
-                          "ReviewID" SERIAL PRIMARY KEY,
-                          "ListID" INT,
-                          "UserID" INT,
-                          "Timestamp" TIMESTAMP,
-                          "ReviewText" TEXT,
-                          FOREIGN KEY ("ListID") REFERENCES "StockList"("ListID"),
-                          FOREIGN KEY ("UserID") REFERENCES "User"("UserID")
+CREATE TABLE review (
+                        review_id SERIAL PRIMARY KEY,
+                        list_id INT,
+                        user_id INT,
+                        timestamp TIMESTAMP,
+                        review_text TEXT,
+                        FOREIGN KEY (list_id) REFERENCES stock_list(list_id),
+                        FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE statics (
+                         Stat_id SERIAL PRIMARY KEY,
+                         portfolio_id INTEGER,
+                         COV JSONB,
+                         Beta JSONB,
+                         Matrix DOUBLE PRECISION,
+                         FOREIGN KEY (portfolio_id) REFERENCES portfolio(portfolio_id)
 );

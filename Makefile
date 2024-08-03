@@ -2,7 +2,7 @@
 CXX = g++
 
 # 指定编译选项
-CXXFLAGS = -I/usr/include/pqxx
+CXXFLAGS = -I/usr/include/pqxx -I/usr/include/eigen3
 
 # 指定链接选项
 LDFLAGS = -lpqxx -lpq
@@ -11,7 +11,7 @@ LDFLAGS = -lpqxx -lpq
 TARGET = UserManager
 
 # 指定源文件
-SRCS = main.cpp UserManager.cpp
+SRCS = main.cpp UserManager.cpp PortfolioManager.cpp FriendManager.cpp ListManager.cpp ReviewManager.cpp StockManager.cpp DailyManager.cpp HoldManager.cpp ListHoldManager.cpp
 
 # 生成的目标文件
 OBJS = $(SRCS:.cpp=.o)

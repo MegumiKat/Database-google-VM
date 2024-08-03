@@ -11,7 +11,7 @@ UserManager::UserManager() {
     try {
         conn = new connection("dbname=mydb user=postgres password=123 hostaddr=127.0.0.1 port=5432");
         if (conn->is_open()) {
-            cout << "Opened database successfully: " << conn->dbname() << endl;
+            //cout << "Opened database successfully: " << conn->dbname() << endl;
         } else {
             cout << "Can't open database" << endl;
         }
@@ -24,11 +24,10 @@ UserManager::~UserManager() {
     conn->disconnect();
     delete conn;
 }
-
 void UserManager::createUser(const string& username, const string& password, const string& email, const string& name) {
     try {
         work W(*conn);
-        string sql = "INSERT INTO \"User\" (\"UserName\", \"Password\", \"Email\", \"Name\") VALUES (" +
+        string sql = "INSERT INTO users (user_name, password, email, name) VALUES (" +
                      W.quote(username) + ", " + W.quote(password) + ", " + W.quote(email) + ", " + W.quote(name) + ");";
         W.exec(sql);
         W.commit();
@@ -41,7 +40,7 @@ void UserManager::createUser(const string& username, const string& password, con
 void UserManager::deleteUser(int userID) {
     try {
         work W(*conn);
-        string sql = "DELETE FROM \"User\" WHERE \"UserID\" = " + W.quote(userID) + ";";
+        string sql = "DELETE FROM users WHERE user_id = " + W.quote(to_string(userID)) + ";";
         W.exec(sql);
         W.commit();
         cout << "User deleted successfully" << endl;
@@ -53,11 +52,11 @@ void UserManager::deleteUser(int userID) {
 void UserManager::updateUser(int userID, const string& username, const string& password, const string& email, const string& name) {
     try {
         work W(*conn);
-        string sql = "UPDATE \"User\" SET \"UserName\" = " + W.quote(username) +
-                     ", \"Password\" = " + W.quote(password) +
-                     ", \"Email\" = " + W.quote(email) +
-                     ", \"Name\" = " + W.quote(name) +
-                     " WHERE \"UserID\" = " + W.quote(to_string(userID)) + ";";
+        string sql = "UPDATE users SET user_name = " + W.quote(username) +
+                     ", password = " + W.quote(password) +
+                     ", email = " + W.quote(email) +
+                     ", name = " + W.quote(name) +
+                     " WHERE user_id = " + W.quote(to_string(userID)) + ";";
         W.exec(sql);
         W.commit();
         cout << "User updated successfully" << endl;
@@ -65,21 +64,45 @@ void UserManager::updateUser(int userID, const string& username, const string& p
         cerr << "Update failed: " << e.what() << std::endl;
     }
 }
+
 void UserManager::getUser(int userID) {
     try {
         nontransaction N(*conn);
-        string sql = "SELECT * FROM \"User\" WHERE \"UserID\" = " + N.quote(userID) + ";";
-        result R = N.exec(sql);
-        cout << sql << endl;
+        string sql = "SELECT * FROM users WHERE user_id = " + N.quote(to_string(userID)) + ";";
+        result R(N.exec(sql));
 
         if (R.empty()) {
-            cout << "No user found with UserID: " << userID << endl;
+            cout << "No user found with user_id: " << userID << endl;
         } else {
-
-            cout << "success" << endl;
+            for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+                cout << "user_id: " << c["user_id"].as<int>() << endl;
+                cout << "user_name: " << c["user_name"].as<string>() << endl;
+                cout << "password: " << c["password"].as<string>() << endl;
+                cout << "email: " << c["email"].as<string>() << endl;
+                cout << "name: " << c["name"].as<string>() << endl;
+            }
         }
     } catch (const std::exception &e) {
         cerr << "Error retrieving user: " << e.what() << std::endl;
     }
 }
+int UserManager::login(const string& username, const string& password) {
+    try {
+        nontransaction N(*conn);
+        string sql = "SELECT * FROM users WHERE user_name = " + N.quote(username) +
+                     " AND password = " + N.quote(password) + ";";
+        result R(N.exec(sql));
 
+        if (R.empty()) {
+            cout << "Login failed: Invalid username or password" << endl;
+            return -1;
+        } else {
+            int userID = R[0]["user_id"].as<int>();
+            cout << "Login successful for user: " << username << " with user_id: " << userID << endl;
+            return userID;
+        }
+    } catch (const std::exception &e) {
+        cerr << "Error during login: " << e.what() << std::endl;
+        return -1;
+    }
+}

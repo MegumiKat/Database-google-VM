@@ -17,6 +17,8 @@ public:
     void deleteUser(int userID);
     void updateUser(int userID, const std::string& username, const std::string& password, const std::string& email, const std::string& name);
     void getUser(int userID);
+    int login(const std::string& username, const std::string& password);
+
 
 private:
     pqxx::connection *conn;
