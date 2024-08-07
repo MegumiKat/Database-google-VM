@@ -8,6 +8,8 @@
 #include <iostream>
 #include <pqxx/pqxx>
 #include <string>
+#include <vector>
+
 
 class HoldManager {
 public:
@@ -19,9 +21,11 @@ public:
     void getHolding(int holdingID);
     void sellHolding(int portfolioID, int stockID, int shares);
     void checkStockPerformance(int stockID);
+    void generateStockGraph(int stockID, const std::string& startDate, const std::string& endDate);
 
 private:
     pqxx::connection *conn;
+    std::string getIntervalCondition(const std::string& startDate, const std::string& endDate);
 };
 
 

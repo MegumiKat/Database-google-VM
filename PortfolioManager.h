@@ -23,6 +23,8 @@ public:
     void calculateCovarianceMatrix(int portfolioId);
     void printStocksInPortfolio(int portfolioID);
     void viewStocksInList(int listID);
+    void getAllStocks(int limit);
+    void calculateTotalPortfolioValue(int portfolioID);
 
 private:
     pqxx::connection *conn;

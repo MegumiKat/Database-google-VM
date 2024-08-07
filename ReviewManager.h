@@ -16,7 +16,7 @@ public:
     ReviewManager();
     ~ReviewManager();
     void createReview(int listID, int userID, const std::string& reviewText);
-    void deleteReview(int reviewID);
+    void deleteReview(int reviewID, int userID);
     void updateReview(int reviewID, const std::string& reviewText);
     void getReview(int reviewID);
     void viewAllStockLists();

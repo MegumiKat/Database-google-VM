@@ -77,6 +77,7 @@ void PortfolioManager::getPortfolio(int portfolioID) {
                 cout << "user_id: " << c["user_id"].as<int>() << endl;
                 cout << "name: " << c["name"].as<string>() << endl;
                 cout << "cash_balance: " << c["cash_balance"].as<double>() << endl;
+                cout << "------------------------" << endl;
             }
         }
     } catch (const std::exception &e) {
@@ -104,6 +105,7 @@ void PortfolioManager::viewPortfolioByUserid(int userID) {
                 cout << "user_id: " << c["user_id"].as<int>() << endl;
                 cout << "name: " << c["name"].as<string>() << endl;
                 cout << "cash_balance: " << c["cash_balance"].as<double>() << endl;
+                cout << "------------------------" << endl;
             }
         }
     } catch (const std::exception &e) {
@@ -274,9 +276,39 @@ void PortfolioManager::calculateCovarianceMatrix(int portfolioId) {
     }
 }
 
+void PortfolioManager::calculateTotalPortfolioValue(int portfolioID) {
+    try {
+        nontransaction N(*conn);
+        double total = 0.0;
+
+        // 获取 portfolio 中的所有股票
+        string query = "SELECT s.current_price, h.shares "
+                       "FROM stock s JOIN stock_holding h ON s.stock_id = h.stock_id "
+                       "WHERE h.portfolio_id = " + to_string(portfolioID) + ";";
+        result R(N.exec(query));
+
+        if (R.empty()) {
+            cout << "No stocks found in portfolio " << portfolioID << endl;
+        } else {
+            for (const auto& row : R) {
+                double currentPrice = row["current_price"].as<double>();
+                int shares = row["shares"].as<int>();
+
+                double stockValue = shares * currentPrice;
+                total += stockValue;
+            }
+            cout << "Total value of portfolio " << portfolioID << ": " << total << endl;
+        }
+    } catch (const std::exception &e) {
+        cerr << "Error calculating total portfolio value: " << e.what() << std::endl;
+    }
+}
+
+
 void PortfolioManager::printStocksInPortfolio(int portfolioID) {
     try {
         nontransaction N(*conn);
+        double total = 0.0;
 
         // 获取 portfolio 中的所有股票
         string query = "SELECT s.stock_id, s.symbol, s.company_name, s.current_price, h.shares "
@@ -289,12 +321,48 @@ void PortfolioManager::printStocksInPortfolio(int portfolioID) {
         } else {
             cout << "Stocks in portfolio " << portfolioID << ":\n";
             for (const auto& row : R) {
-                cout << "Stock ID: " << row["stock_id"].as<int>()
-                     << ", Symbol: " << row["symbol"].as<string>()
-                     << ", Company Name: " << row["company_name"].as<string>()
-                     << ", Current Price: " << row["current_price"].as<double>()
-                     << ", Shares: " << row["shares"].as<int>()
+                int stockID = row["stock_id"].as<int>();
+                string symbol = row["symbol"].as<string>();
+                double currentPrice = row["current_price"].as<double>();
+                int shares = row["shares"].as<int>();
+
+                double stockValue = shares * currentPrice;
+                total += stockValue;
+
+                cout << "Stock ID: " << stockID
+                     << ", Symbol: " << symbol
+                     << ", Current Price: " << currentPrice
+                     << ", Shares: " << shares
+                     << ", Value: " << stockValue
                      << endl;
+            }
+            cout << "Total value of portfolio " << portfolioID << ": " << total << endl;
+        }
+    } catch (const std::exception &e) {
+        cerr << "Error retrieving stocks: " << e.what() << std::endl;
+    }
+}
+
+
+void PortfolioManager::getAllStocks(int limit) {
+    try {
+        nontransaction N(*conn);
+        string sql = "SELECT * FROM stock ORDER BY stock_id LIMIT " + to_string(limit) + ";";
+        result R(N.exec(sql));
+
+        if (R.empty()) {
+            cout << "No stocks found." << endl;
+        } else {
+            for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+                int stock_id = c["stock_id"].is_null() ? -1 : c["stock_id"].as<int>();
+                string symbol = c["symbol"].is_null() ? "N/A" : c["symbol"].as<string>();
+                string company_name = c["company_name"].is_null() ? "Unknown" : c["company_name"].as<string>();
+                double current_price = c["current_price"].is_null() ? 0.0 : c["current_price"].as<double>();
+                cout << "stock_id: " << stock_id << endl;
+                cout << "symbol: " << symbol << endl;
+                cout << "company_name: " << company_name << endl;
+                cout << "current_price: " << current_price << endl;
+                cout << "------------------------" << endl;
             }
         }
     } catch (const std::exception &e) {

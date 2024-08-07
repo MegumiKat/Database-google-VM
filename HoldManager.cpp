@@ -3,6 +3,10 @@
 //
 
 #include "HoldManager.h"
+#include <iostream>
+#include <numeric>
+#include <map>
+#include <iomanip>
 
 
 using namespace std;
@@ -201,43 +205,153 @@ void HoldManager::sellHolding(int portfolioID, int stockID, int shares) {
     }
 }
 
+//void HoldManager::checkStockPerformance(int stockID) {
+//    try {
+//        nontransaction N(*conn);
+//
+//        // 查询 symbol
+//        string symbolQuery = "SELECT symbol FROM stock WHERE stock_id = " + to_string(stockID) + ";";
+//        result symbolR(N.exec(symbolQuery));
+//
+//        if (symbolR.empty()) {
+//            cerr << "Error: Stock with ID " << stockID << " not found" << endl;
+//            return;
+//        }
+//
+//        string symbol = symbolR[0]["symbol"].as<string>();
+//
+//        // 查询最小和最大 timestamp 对应的 close 值
+//        string minTimestampQuery = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp ASC LIMIT 1;";
+//        string maxTimestampQuery = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp DESC LIMIT 1;";
+//
+//        result minTimestampR(N.exec(minTimestampQuery));
+//        result maxTimestampR(N.exec(maxTimestampQuery));
+//
+//        if (minTimestampR.empty() || maxTimestampR.empty()) {
+//            cerr << "Error: No data found for symbol " << symbol << endl;
+//            return;
+//        }
+//
+//        double minClose = minTimestampR[0]["close"].as<double>();
+//        double maxClose = maxTimestampR[0]["close"].as<double>();
+//
+//        if (maxClose - minClose < 0) {
+//            cout << "It is a bad stock" << endl;
+//        } else {
+//            cout << "It is a good stock" << endl;
+//        }
+//
+//    } catch (const std::exception &e) {
+//        cerr << e.what() << std::endl;
+//    }
+//}
+
 void HoldManager::checkStockPerformance(int stockID) {
     try {
-        nontransaction N(*conn);
+        pqxx::nontransaction N(*conn);
 
-        // 查询 symbol
-        string symbolQuery = "SELECT symbol FROM stock WHERE stock_id = " + to_string(stockID) + ";";
-        result symbolR(N.exec(symbolQuery));
+        // Query for the symbol
+        std::string symbolQuery = "SELECT symbol FROM stock WHERE stock_id = " + std::to_string(stockID) + ";";
+        pqxx::result symbolR(N.exec(symbolQuery));
 
         if (symbolR.empty()) {
-            cerr << "Error: Stock with ID " << stockID << " not found" << endl;
+            std::cerr << "Error: Stock with ID " << stockID << " not found" << std::endl;
             return;
         }
 
-        string symbol = symbolR[0]["symbol"].as<string>();
+        std::string symbol = symbolR[0]["symbol"].as<std::string>();
 
-        // 查询最小和最大 timestamp 对应的 close 值
-        string minTimestampQuery = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp ASC LIMIT 1;";
-        string maxTimestampQuery = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp DESC LIMIT 1;";
+        // Query for the latest 5 close values
+        std::string latest5Query = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp DESC LIMIT 5;";
+        pqxx::result latest5R(N.exec(latest5Query));
 
-        result minTimestampR(N.exec(minTimestampQuery));
-        result maxTimestampR(N.exec(maxTimestampQuery));
-
-        if (minTimestampR.empty() || maxTimestampR.empty()) {
-            cerr << "Error: No data found for symbol " << symbol << endl;
-            return;
+        std::cout << "Latest 5 close values for " << symbol << ":\n";
+        for (auto row : latest5R) {
+            double closeValue = row["close"].as<double>();
+            int histogramSize = static_cast<int>(closeValue / 5); // Adjust the division factor as needed
+            std::cout << closeValue << ": " << std::string(histogramSize, '*') << std::endl;
         }
 
-        double minClose = minTimestampR[0]["close"].as<double>();
-        double maxClose = maxTimestampR[0]["close"].as<double>();
+        // Query for the latest 30 close values
+        std::string latest30Query = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " ORDER BY timestamp DESC LIMIT 30;";
+        pqxx::result latest30R(N.exec(latest30Query));
 
-        if (maxClose - minClose < 0) {
-            cout << "It is a bad stock" << endl;
+        std::vector<double> closeValues;
+        for (auto row : latest30R) {
+            closeValues.push_back(row["close"].as<double>());
+        }
+
+        // Calculate the average of the latest 30 close values
+        double average = std::accumulate(closeValues.begin(), closeValues.end(), 0.0) / closeValues.size();
+        double latestClose = closeValues.front(); // Latest close value is the first in the result
+
+
+        // Print out the prediction value
+        if (average > latestClose) {
+            std::cout << "Prediction: increase to " << average << std::endl;
         } else {
-            cout << "It is a good stock" << endl;
+            std::cout << "Prediction: decrease to " << average << std::endl;
+        }
+
+        cout << "------------------------" << endl;
+
+    } catch (const std::exception &e) {
+        std::cerr << "Error retrieving stock performance data: " << e.what() << std::endl;
+    }
+}
+
+std::string HoldManager::getIntervalCondition(const std::string& startDate, const std::string& endDate) {
+    return "DATE(timestamp) BETWEEN '" + startDate + "' AND '" + endDate + "'";
+}
+
+void HoldManager::generateStockGraph(int stockID, const std::string& startDate, const std::string& endDate) {
+    try {
+        pqxx::nontransaction N(*conn);
+
+        // Query for the symbol
+        std::string symbolQuery = "SELECT symbol FROM stock WHERE stock_id = " + std::to_string(stockID) + ";";
+        pqxx::result symbolR(N.exec(symbolQuery));
+
+        if (symbolR.empty()) {
+            std::cerr << "Error: Stock with ID " << stockID << " not found" << std::endl;
+            return;
+        }
+
+        std::string symbol = symbolR[0]["symbol"].as<std::string>();
+
+        // Get the condition for the interval
+        std::string intervalCondition = getIntervalCondition(startDate, endDate);
+
+        // Query for historical data within the interval
+        std::string historicalQuery = "SELECT close FROM stock_daily_data WHERE symbol = " + N.quote(symbol) + " AND " + intervalCondition + " ORDER BY timestamp ASC;";
+        pqxx::result historicalR(N.exec(historicalQuery));
+
+        if (historicalR.empty()) {
+            std::cerr << "Error: No data found for symbol " << symbol << " in the specified date range" << std::endl;
+            return;
+        }
+
+        std::vector<double> closeValues;
+        for (auto row : historicalR) {
+            closeValues.push_back(row["close"].as<double>());
+        }
+
+        // Generate histogram data
+        std::map<int, int> histogram;
+        int binSize = 2; // Adjust bin size as needed
+        for (double value : closeValues) {
+            int bin = static_cast<int>(value / binSize) * binSize;
+            histogram[bin]++;
+        }
+
+        // Print the histogram
+        std::cout << "Histogram of Close Prices for " << symbol << " (" << startDate << " to " << endDate << "):\n";
+        for (const auto& [bin, frequency] : histogram) {
+            std::cout << std::setw(5) << bin << " - " << std::setw(5) << bin + binSize - 1 << " : "
+                      << std::string(frequency, '*') << "\n";
         }
 
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        std::cerr << "Error generating stock graph: " << e.what() << std::endl;
     }
 }

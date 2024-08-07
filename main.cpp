@@ -54,6 +54,7 @@ void PortfolioChosen(PortfolioManager& portfolioManager){
         cout << "Enter:\n Portfolio id to check Statics or 0 to Back" << endl;
         cin >> operation;
         if(operation != 0){
+            portfolioManager.calculateTotalPortfolioValue(operation);
             portfolioManager.calculateCovarianceMatrix(operation);
             portfolioManager.viewStocksInList(operation);
         }else{
@@ -91,6 +92,7 @@ void PortfolioOperation(PortfolioManager& portfolioManager, int userid, HoldMana
     int portfolioId;
     int stockId;
     int share;
+    int num;
 
     bool login = true;
     while (login){
@@ -139,6 +141,9 @@ void PortfolioOperation(PortfolioManager& portfolioManager, int userid, HoldMana
                 case 5:
                     cout << "\n--------------------------" << endl;
                     cout << "Add Stock_Holding" << endl;
+                    cout << "Enter the number of stocks you want to see: " << endl;
+                    cin >> num;
+                    portfolioManager.getAllStocks(num);
                     cout << "Enter Portfolio Id or 0 for back" << endl;
                     cin >> portfolioId;
                     if(portfolioId == 0){
@@ -300,7 +305,7 @@ void Reviewing(ReviewManager& reviewManager, int userID){
                 if (reviewID == 0) {
                     break;
                 }
-                reviewManager.deleteReview(reviewID);
+                reviewManager.deleteReview(reviewID, userID);
                 break;
             case 0:
                 cout << "\n--------------------------" << endl;
@@ -334,8 +339,9 @@ void stockListChosen(ListHoldManager& listHoldManager){
 }
 
 
-void stockListOperation(StockManager& stockManager,ListManager& ListManager, ListHoldManager& listHoldManager, int userID){
+void stockListOperation(DailyManager& dailyManager, StockManager& stockManager,ListManager& ListManager, ListHoldManager& listHoldManager, int userID){
     int operation;
+    int num;
     bool login = true;
     while (login) {
         cout << "Enter:\n"
@@ -345,6 +351,8 @@ void stockListOperation(StockManager& stockManager,ListManager& ListManager, Lis
              << "4 for Update Stock List\n"
              << "5 for Share Stock List to Friend\n"
              << "6 for Add Stock to List\n"
+             << "7 for integrate stock info\n"
+             << "8 for delete stock list\n"
              << "0 for Back\n";
         cin >> operation;
 
@@ -401,6 +409,9 @@ void stockListOperation(StockManager& stockManager,ListManager& ListManager, Lis
             case 6: {
                 cout << "\n--------------------------" << endl;
                 int listID, stockID, shares;
+                cout << "Enter number of stocks you want to see: ";
+                cin >> num;
+                ListManager.getAllStocks(num);
                 cout << "Enter Stock List ID to Add Stock: ";
                 cin >> listID;
                 cout << "Enter Stock ID: ";
@@ -408,6 +419,32 @@ void stockListOperation(StockManager& stockManager,ListManager& ListManager, Lis
                 cout << "Enter Number of Shares: ";
                 cin >> shares;
                 listHoldManager.createListHold(listID, stockID, shares);
+                break;
+            }
+            case 7: {
+                cout << "\n--------------------------" << endl;
+                double open, high, low, close, volume;
+                string symbol;
+                cout << "Enter number of open price: ";
+                cin >> open;
+                cout << "Enter number of high price: ";
+                cin >> high;
+                cout << "Enter number of low price: ";
+                cin >> low;
+                cout << "Enter number of close price: ";
+                cin >> close;
+                cout << "Enter number of volume: ";
+                cin >> volume;
+                cout << "Enter the symbol: ";
+                cin >> symbol;
+                dailyManager.createDailyData(open, high,low, close, volume, symbol);
+                break;
+            }
+            case 8: {
+                int id;
+                cout << "Enter the list ID you want to delete: \n";
+                cin >> id;
+                ListManager.deleteList(id, userID);
                 break;
             }
             case 0:
@@ -427,8 +464,10 @@ void showOperations(PortfolioManager& portfolioManager, StockManager& stockManag
     int operation;
     int id;
     bool login = true;
+    int num;
+    cout << "Welcome to use C43 pro!\n";
     while (login){
-        cout << "Enter:\n 1 for Portfolio Management\n 2 for StockList Management\n 3 for Friendship List\n 4 for Reviewing\n 5 for Prediction\n 0 to Logout" << endl;
+        cout << "Enter:\n 1 for Portfolio Management\n 2 for StockList Management\n 3 for Friendship List\n 4 for Reviewing\n 5 for Prediction\n 6 for Stock history\n 0 to Logout" << endl;
         cin >> operation;
         switch (operation) {
                 case 1:
@@ -442,7 +481,7 @@ void showOperations(PortfolioManager& portfolioManager, StockManager& stockManag
                     cout << "\n--------------------------" << endl;
                     // StockList Management
                     cout << "StockList Management selected." << endl;
-                    stockListOperation(stockManager,listManager,listHoldManager,userid);
+                    stockListOperation(dailyManager, stockManager,listManager,listHoldManager,userid);
                     // 在这里调用stockManager的相关功能
                     break;
                 case 3:
@@ -465,6 +504,34 @@ void showOperations(PortfolioManager& portfolioManager, StockManager& stockManag
                     cout << "Enter stock ID: ";
                     cin >> id;
                     holdManager.checkStockPerformance(id);
+                    break;
+                case 6:
+                    int option;
+                    cout << "\n--------------------------" << endl;
+                    cout << "Check history of specific stock" << endl;
+                    cout << "Enter: \n1 for check history of stock without graph: \n2 for check history of stock with graph\n";
+                    cin >> option;
+                    if (option == 1){
+                        cout << "Enter stock ID: ";
+                        cin >> id;
+                        cout << "Enter num of history data: ";
+                        cin >> num;
+                        cout << "\n--------------------------" << endl;
+                        dailyManager.getDailyData(id, num);
+                    }else if (option == 2) {
+                        std::string startDate;
+                        std::string endDate;
+
+                        std::cout << "Enter stock ID to generate graph: ";
+                        std::cin >> id;
+
+                        std::cout << "Enter start date (YYYY-MM-DD): ";
+                        std::cin >> startDate;
+
+                        std::cout << "Enter end date (YYYY-MM-DD): ";
+                        std::cin >> endDate;
+                        holdManager.generateStockGraph(id, startDate, endDate);
+                    }
                     break;
                 case 0:
                     cout << "\n--------------------------" << endl;

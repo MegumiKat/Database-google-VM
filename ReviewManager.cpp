@@ -28,28 +28,88 @@ ReviewManager::~ReviewManager() {
 
 void ReviewManager::createReview(int listID, int userID, const string& reviewText) {
     try {
+        nontransaction N(*conn);
+
+        // 检查是否已经存在相同 listID 和 userID 的评论
+        string checkQuery = "SELECT review_text FROM review WHERE list_id = " + N.quote(to_string(listID)) +
+                            " AND user_id = " + N.quote(to_string(userID)) + ";";
+        result checkResult(N.exec(checkQuery));
+
+        if (!checkResult.empty()) {
+            string existingReview = checkResult[0]["review_text"].as<string>();
+            cout << "Existing review: " << existingReview << endl;
+            cout << "Cannot add duplicate review for the same user and list." << endl;
+            return;
+        }
+
+        // 结束非事务操作
+        N.abort();
+
+        // 如果没有重复评论，则插入新评论
         work W(*conn);
-        string sql = "INSERT INTO review (list_id, user_id, timestamp, review_text) VALUES (" +
-                     W.quote(to_string(listID)) + ", " + W.quote(to_string(userID)) + ", NOW(), " + W.quote(reviewText) + ");";
-        W.exec(sql);
+        string insertQuery = "INSERT INTO review (list_id, user_id, timestamp, review_text) VALUES (" +
+                             W.quote(to_string(listID)) + ", " + W.quote(to_string(userID)) + ", NOW(), " + W.quote(reviewText) + ");";
+        W.exec(insertQuery);
         W.commit();
         cout << "Review created successfully" << endl;
+
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        cerr << "Error: " << e.what() << std::endl;
     }
 }
 
-void ReviewManager::deleteReview(int reviewID) {
+
+
+void ReviewManager::deleteReview(int reviewID, int userID) {
     try {
-        work W(*conn);
-        string sql = "DELETE FROM review WHERE review_id = " + W.quote(to_string(reviewID)) + ";";
-        W.exec(sql);
-        W.commit();
-        cout << "Review deleted successfully" << endl;
+        nontransaction N(*conn);
+
+        // 获取 review 的 user_id 和 list_id
+        string reviewQuery = "SELECT user_id, list_id FROM review WHERE review_id = " + N.quote(to_string(reviewID)) + ";";
+        result reviewResult(N.exec(reviewQuery));
+
+        if (reviewResult.empty()) {
+            cout << "Review not found" << endl;
+            return;
+        }
+
+        int reviewUserID = reviewResult[0]["user_id"].as<int>();
+        int listID = reviewResult[0]["list_id"].as<int>();
+
+        // 检查 review 的 user_id 是否等于传入的 userID
+        if (reviewUserID == userID) {
+            N.abort();  // 结束非事务操作
+            work W(*conn);
+            string deleteQuery = "DELETE FROM review WHERE review_id = " + W.quote(to_string(reviewID)) + ";";
+            W.exec(deleteQuery);
+            W.commit();
+            cout << "Review deleted successfully" << endl;
+            return;
+        }
+
+        // 如果 review 的 user_id 不等于传入的 userID，检查 list 的 user_id
+        string listQuery = "SELECT user_id FROM stock_list WHERE list_id = " + N.quote(to_string(listID)) + ";";
+        result listResult(N.exec(listQuery));
+
+        if (!listResult.empty() && listResult[0]["user_id"].as<int>() == userID) {
+            N.abort();  // 结束非事务操作
+            work W(*conn);
+            string deleteQuery = "DELETE FROM review WHERE review_id = " + W.quote(to_string(reviewID)) + ";";
+            W.exec(deleteQuery);
+            W.commit();
+            cout << "Review deleted successfully" << endl;
+            return;
+        }
+
+        // 如果都不满足，打印错误信息
+        cout << "You do not have permission to delete this review" << endl;
+
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        cerr << "Error: " << e.what() << std::endl;
     }
 }
+
+
 
 void ReviewManager::updateReview(int reviewID, const string& reviewText) {
     try {
@@ -99,6 +159,7 @@ void ReviewManager::viewAllStockLists() {
                 cout << "user_id: " << c["user_id"].as<int>() << endl;
                 cout << "name: " << c["name"].as<string>() << endl;
                 cout << "public: " << c["public"].as<bool>() << endl;
+                cout << "---------------------------------------" << endl;
             }
         }
     } catch (const std::exception &e) {
