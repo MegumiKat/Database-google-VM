@@ -21,6 +21,7 @@ public:
     void getReview(int reviewID);
     void viewAllStockLists();
     void viewReviewsByListId(int listID);
+    void viewReviewsByUserId(int userID);
 
 private:
     pqxx::connection *conn;

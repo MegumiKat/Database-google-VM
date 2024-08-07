@@ -30,6 +30,21 @@ void ReviewManager::createReview(int listID, int userID, const string& reviewTex
     try {
         nontransaction N(*conn);
 
+        // 检查 listID 对应的 stock_list 是否为 public
+        string publicCheckQuery = "SELECT public FROM stock_list WHERE list_id = " + N.quote(to_string(listID)) + ";";
+        result publicCheckResult(N.exec(publicCheckQuery));
+
+        if (publicCheckResult.empty()) {
+            cout << "List with listID " << listID << " does not exist." << endl;
+            return;
+        }
+
+        bool isPublic = publicCheckResult[0]["public"].as<bool>();
+        if (!isPublic) {
+            cout << "The list with listID " << listID << " is not public. Cannot add review." << endl;
+            return;
+        }
+
         // 检查是否已经存在相同 listID 和 userID 的评论
         string checkQuery = "SELECT review_text FROM review WHERE list_id = " + N.quote(to_string(listID)) +
                             " AND user_id = " + N.quote(to_string(userID)) + ";";
@@ -180,9 +195,31 @@ void ReviewManager::viewReviewsByListId(int listID) {
                 cout << "list_id: " << c["list_id"].as<int>() << endl;
                 cout << "user_id: " << c["user_id"].as<int>() << endl;
                 cout << "review_text: " << c["review_text"].as<string>() << endl;
+                cout << "---------------------------------------" << endl;
             }
         }
     } catch (const std::exception &e) {
         cerr << "Error retrieving reviews for list_id: " << e.what() << std::endl;
+    }
+}
+
+void ReviewManager::viewReviewsByUserId(int userID) {
+    try {
+        nontransaction N(*conn);
+        string sql = "SELECT * FROM review WHERE user_id = " + N.quote(to_string(userID)) + ";";
+        result R(N.exec(sql));
+
+        if (R.empty()) {
+            cout << "No reviews found for user_id: " << userID << endl;
+        } else {
+            for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+                cout << "review_id: " << c["review_id"].as<int>() << endl;
+                cout << "list_id: " << c["list_id"].as<int>() << endl;
+                cout << "review_text: " << c["review_text"].as<string>() << endl;
+                cout << "---------------------------------------" << endl;
+            }
+        }
+    } catch (const std::exception &e) {
+        cerr << "Error retrieving reviews for user_id: " << e.what() << std::endl;
     }
 }

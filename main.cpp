@@ -70,7 +70,7 @@ void StockReviewChosen(ReviewManager& reviewManager){
     bool login = true;
     while (login){
         cout << "\n--------------------------" << endl;
-        cout << "Enter Stock id to check all Review List or 0 to Back\n"<< endl;
+        cout << "Enter Stock List id to check all Review List or 0 to Back\n"<< endl;
         cin >> operation;
         if(operation != 0){
             reviewManager.viewReviewsByListId(operation);
@@ -265,7 +265,7 @@ void Reviewing(ReviewManager& reviewManager, int userID){
 
     bool continueReview = true;
     while (continueReview){
-        cout << "Enter:\n 1 for View Stock List\n 2 for Create Review\n 3 for Update Review\n 4 for Delete Review\n 0 to Back" << endl;
+        cout << "Enter:\n 1 for View Stock List\n 2 for Create Review\n 3 for Update Review\n 4 for Delete Review\n 5 for View your Review\n 0 to Back" << endl;
         cin >> operation;
         switch (operation) {
             case 1:
@@ -307,6 +307,8 @@ void Reviewing(ReviewManager& reviewManager, int userID){
                 }
                 reviewManager.deleteReview(reviewID, userID);
                 break;
+            case 5:
+                reviewManager.viewReviewsByUserId(userID);
             case 0:
                 cout << "\n--------------------------" << endl;
                 cout << "Going Back." << endl;
@@ -320,7 +322,7 @@ void Reviewing(ReviewManager& reviewManager, int userID){
     }
 }
 
-void stockListChosen(ListHoldManager& listHoldManager){
+void stockListChosen(ListHoldManager& listHoldManager, ReviewManager& reviewManager){
     int operation;
     bool login = true;
     while (login){
@@ -330,6 +332,7 @@ void stockListChosen(ListHoldManager& listHoldManager){
         if(operation != 0){
             listHoldManager.calculateCovarianceMatrix(operation);
             listHoldManager.viewStocksInList(operation);
+            reviewManager.viewReviewsByListId(operation);
         }else{
             cout << "\n--------------------------" << endl;
             login= false;
@@ -339,7 +342,7 @@ void stockListChosen(ListHoldManager& listHoldManager){
 }
 
 
-void stockListOperation(DailyManager& dailyManager, StockManager& stockManager,ListManager& ListManager, ListHoldManager& listHoldManager, int userID){
+void stockListOperation(DailyManager& dailyManager, StockManager& stockManager,ListManager& ListManager, ListHoldManager& listHoldManager, int userID, ReviewManager& reviewManager){
     int operation;
     int num;
     bool login = true;
@@ -360,13 +363,13 @@ void stockListOperation(DailyManager& dailyManager, StockManager& stockManager,L
             case 1:
                 cout << "\n--------------------------" << endl;
                 if(ListManager.viewMyStockLists(userID)){
-                    stockListChosen(listHoldManager);
+                    stockListChosen(listHoldManager, reviewManager);
                 }
                 break;
             case 2:
                 cout << "\n--------------------------" << endl;
                 if(ListManager.viewAllPublicStockLists()){
-                    stockListChosen(listHoldManager);
+                    stockListChosen(listHoldManager,reviewManager);
                 }
                 break;
             case 3: {
@@ -481,7 +484,7 @@ void showOperations(PortfolioManager& portfolioManager, StockManager& stockManag
                     cout << "\n--------------------------" << endl;
                     // StockList Management
                     cout << "StockList Management selected." << endl;
-                    stockListOperation(dailyManager, stockManager,listManager,listHoldManager,userid);
+                    stockListOperation(dailyManager, stockManager,listManager,listHoldManager,userid, reviewManager);
                     // 在这里调用stockManager的相关功能
                     break;
                 case 3:
